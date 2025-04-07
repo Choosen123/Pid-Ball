@@ -2,9 +2,14 @@
 #include <vector>
 #include <opencv2/opencv.hpp>
 #include <opencv2/dnn.hpp>
+<<<<<<< HEAD
+#include "onnxruntime_cxx_api.h"
 #include <cmath>
 // #include <core/providers/tensorrt/tensor_rt_provider_factory.h>
+=======
 #include "onnxruntime_cxx_api.h"
+#include <cmath>
+>>>>>>> origin/main
 #include "serialport/serialport.h"
 
 #define ORINGIN_X 328
@@ -19,8 +24,13 @@ using namespace std::chrono;
 
 bool use_cuda = true;
 int image_size = 640;
+<<<<<<< HEAD
 double rate = 170.0/540.49;//536
 std::string model_path = "/home/homesickalien/pid_ball/batch_16_epochs_300.onnx";
+=======
+double rate = 170.0/536.0;
+std::string model_path = "/home/homesickalien/pid_ball/batch_8_ep_200_yolov7.onnx";
+>>>>>>> origin/main
 std::string image_path = "/home/homesickalien/pid_ball/pid_ball.mp4";
 
 cv::Point origin(ORINGIN_X,ORINGIN_y);
@@ -108,6 +118,7 @@ double calculate_position(double angle,double distance,double r){
 int main(){
     io_service stm;
     MySerial sp("/dev/ttyUSB0",115200,8,stm);
+<<<<<<< HEAD
 
     sp.position=75;
     // sp.flush_buffer();
@@ -118,6 +129,13 @@ int main(){
     
     double angle_tran;
     double position;
+=======
+    
+    cv::Mat test_img = cv::imread("/home/homesickalien/chess/chess/programe/frame0180.jpg");
+    
+    double angle=30.0,angle_tran;
+    
+>>>>>>> origin/main
     
     // cv::VideoCapture cap(image_path);
     // cv::VideoCapture cap("/dev/camera1");
@@ -127,6 +145,7 @@ int main(){
     
     Ort::Env env(ORT_LOGGING_LEVEL_WARNING, "YOLOv7");
     Ort::SessionOptions options;
+<<<<<<< HEAD
     // OrtTensorRTProviderOptions option;
     
     // option.device_id=0;
@@ -138,11 +157,14 @@ int main(){
     options.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_EXTENDED);
     options.EnableCpuMemArena();
 
+=======
+>>>>>>> origin/main
     if(use_cuda) Ort::ThrowOnError(OrtSessionOptionsAppendExecutionProvider_CUDA(options, 0));
     Ort::Session session(env, model_path.c_str(), options);
     
     cap.read(image_camera);
     
+<<<<<<< HEAD
     // 持续处理事件，直到 io_service 停止
     std::thread io_thread([&stm]() {
         stm.run(); 
@@ -230,6 +252,76 @@ int main(){
                     cv::waitKey(1);
                 }
                 
+=======
+    std::thread io_thread([&stm]() {
+        stm.run(); // 持续处理事件，直到 io_service 停止
+    });
+    
+    int x_double,y_double;
+
+    double center_x=0.0,center_y=0.0;
+    double distance=0.0;
+    double delta_time;
+    // double position;
+    
+    while(1){
+        if(!cap.read(image_camera) || !sp.init_and_open()){
+            cout<<"break"<<endl;
+            break;
+        }else{
+            try{
+                auto pre_time=high_resolution_clock::now();
+                
+                auto [input_data, shape, image] = read_image(image_camera,image_size);
+                
+                auto [output_data, output_shape] = process_image(session, input_data, shape);
+                
+                if(!output_shape.empty()){
+                    
+                    for (size_t i = 0; i < shape[0]; ++i)
+                    {
+                        auto ptr = output_data.data() + i * shape[1];
+                        
+                        int x = ptr[1], y = ptr[2], w = ptr[3] - x, h = ptr[4] - y, c = ptr[5];
+                        x_double = (x+ptr[3])/2, y_double = (y+ptr[4])/2;
+                        cout<<x_double<<' '<<y_double<<endl;
+                        center_x = static_cast<uint8_t>(x_double), center_y = static_cast<uint8_t>(y_double);
+                        
+                        distance = static_cast<uint8_t>(sqrt((x_double-ORINGIN_X)*(x_double-ORINGIN_X)+(y_double-ORINGIN_y)*(y_double-ORINGIN_y)));
+                        
+                        sp.flush_buffer();
+                        sp.my_async_write();
+                    
+                        angle_tran = (sp.angle*1.0/10-12.8)*M_PI/180.0;
+
+                        if(x_double>=ORINGIN_X)
+                            sp.position=static_cast<uint8_t>(calculate_position(angle_tran,distance,w/2)*rate);
+                        else
+                            sp.position=-static_cast<uint8_t>(calculate_position(angle_tran,distance,w/2)*rate);
+                        sp.position+=75;
+                        sp.my_async_read();
+                        stm.run();
+                        
+                        auto current_time = high_resolution_clock::now();
+                        delta_time = duration_cast<duration<double>>(current_time-pre_time).count();
+
+                        auto color = CV_RGB(255, 255, 255);
+                        auto name = std::string(class_names[c]) + ":" + std::to_string(int(ptr[6] * 100)) + "%";
+                        cv::rectangle(image, {x, y, w, h}, color);
+                        // cv::putText(image, name, {x, y}, cv::FONT_HERSHEY_DUPLEX, 0.5, color);
+                        cv::putText(image,to_string(delta_time), {x, y}, cv::FONT_HERSHEY_DUPLEX, 0.5, color);
+                    }
+
+                show_cor(image,center_x,center_y);
+            
+                cv::imshow("YOLOv7 Output", image);
+            
+                cv::waitKey(1);
+            
+                }else{
+                    cv::imshow("YOLOv7 Output",image_camera);
+                }
+>>>>>>> origin/main
             }catch(const exception& e){
                 cerr << "Exception caught: " << e.what() << endl;
             }catch(...){
