@@ -28,13 +28,23 @@ void MySerial::flush_buffer(){
 }
 
 void MySerial::my_async_read(){
-    async_read(sp,buffer(&angle,sizeof(angle)),
-            boost::bind(&MySerial::read_callback,this,_1,_2));
+    // async_read(sp,buffer(data_buffer,sizeof(data_buffer)),
+            // boost::bind(&MySerial::read_callback,this,_1,_2));
+        read(sp,buffer(data_buffer,sizeof(data_buffer)));
+        boost::endian::little_float32_t receiveData;
+        std::memcpy(&receiveData, data_buffer, sizeof(receiveData));
+
+        angle = receiveData;
+        cout<<angle<<' '<<count<<endl;
 }
 
 void MySerial::read_callback(const boost::system::error_code &ec,size_t bytes){ 
     if(!ec&&bytes>0){
-        cout<<static_cast<int>(angle)<<' '<<count<<endl;
+        boost::endian::little_float32_t receiveData;
+        std::memcpy(&receiveData, data_buffer, sizeof(receiveData));
+
+        angle = receiveData;
+        cout<<angle<<' '<<count<<endl;
     }else if(ec){
         cout<<ec.message()<<endl;
     }
@@ -47,7 +57,7 @@ void MySerial::my_async_write(){
 
 void MySerial::write_callback(const boost::system::error_code &ec, size_t bytes){
     if(!ec){
-        cout<<MySerial::count++<<"send:"<<bytes<<"bytes"<<' '<<position<<endl;
+        cout<<MySerial::count++<<"send:"<<bytes<<"bytes"<<' '<<to_string(position)<<endl;
     }else{
         cerr<<"failed"<<ec.message()<<endl;
     }

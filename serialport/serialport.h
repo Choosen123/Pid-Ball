@@ -4,6 +4,9 @@
 #include <boost/asio.hpp>
 #include <boost/bind/bind.hpp>
 #include <boost/asio/serial_port.hpp>
+#include <boost/endian/conversion.hpp>
+#include <boost/endian/arithmetic.hpp>
+
 
 using namespace boost::asio;
 using namespace std;
@@ -16,11 +19,11 @@ private:
     unsigned int character_size;
     serial_port sp;
     int count=0;
- 
+    char data_buffer[4];
     
 public:
-    uint8_t angle;
-    int8_t position=75;
+    float angle;
+    uint8_t position=75;
     
     MySerial(string name,unsigned int baud_rate,unsigned int character_size,io_context &io);
 
